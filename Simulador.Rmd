@@ -1,0 +1,170 @@
+# Pacotes necessários
+```{r}
+library(ggplot2)
+```
+
+# Carregar datasets
+```{r}
+tempoChegadas <- read.csv("./tc.txt")
+tempoServico <- read.csv("./ts.txt")
+```
+
+# Função para calcular a moda
+```{r}
+calcular_moda <- function(dados) {
+  uniqv <- unique(dados)
+  uniqv[which.max(tabulate(match(dados, uniqv)))]
+}
+```
+
+# Estatísticas descritivas para Tempo entre Chegadas
+```{r}
+media_chegadas <- mean(tempoChegadas$x)
+mediana_chegadas <- median(tempoChegadas$x)
+moda_chegadas <- calcular_moda(tempoChegadas$x)
+desvio_padrao_chegadas <- sd(tempoChegadas$x)
+maximo_chegadas <- max(tempoChegadas$x)
+minimo_chegadas <- min(tempoChegadas$x)
+
+# Imprimir os resultados
+cat("Estatísticas descritivas para Tempo entre Chegadas:\n")
+cat("Média:", media_chegadas, "\n")
+cat("Mediana:", mediana_chegadas, "\n")
+cat("Moda:", moda_chegadas, "\n")
+cat("Desvio Padrão:", desvio_padrao_chegadas, "\n")
+cat("Máximo:", maximo_chegadas, "\n")
+cat("Mínimo:", minimo_chegadas, "\n")
+```
+
+# Estatísticas descritivas para Tempo de Serviço
+```{r}
+media_servico <- mean(tempoServico$x)
+mediana_servico <- median(tempoServico$x)
+moda_servico <- calcular_moda(tempoServico$x)
+desvio_padrao_servico <- sd(tempoServico$x)
+maximo_servico <- max(tempoServico$x)
+minimo_servico <- min(tempoServico$x)
+
+# Imprimir os resultados
+cat("Estatísticas descritivas para Tempo de Serviço:\n")
+cat("Média:", media_servico, "\n")
+cat("Mediana:", mediana_servico, "\n")
+cat("Moda:", moda_servico, "\n")
+cat("Desvio Padrão:", desvio_padrao_servico, "\n")
+cat("Máximo:", maximo_servico, "\n")
+cat("Mínimo:", minimo_servico, "\n")
+```
+
+# Função para identificar outliers
+```{r}
+identificar_outliers <- function(dados) {
+  Q1 <- quantile(dados, 0.25)
+  Q3 <- quantile(dados, 0.75)
+  IQR <- Q3 - Q1
+  
+  limite_inferior_moderado <- Q1 - 1.5 * IQR
+  limite_superior_moderado <- Q3 + 1.5 * IQR
+  limite_inferior_extremo <- Q1 - 3 * IQR
+  limite_superior_extremo <- Q3 + 3 * IQR
+  
+  outliers_moderados <- dados[dados < limite_inferior_moderado | dados > limite_superior_moderado]
+  outliers_extremos <- dados[dados < limite_inferior_extremo | dados > limite_superior_extremo]
+  
+  if (length(outliers_moderados) == 0) {
+    outliers_moderados <- "não há"
+  }
+  
+  if (length(outliers_extremos) == 0) {
+    outliers_extremos <- "não há"
+  }
+  
+  list(moderados = outliers_moderados, extremos = outliers_extremos)
+}
+```
+
+# Outliers Tempo entre Chegadas
+```{r}
+outliers_chegadas <- identificar_outliers(tempoChegadas$x)
+cat("Outliers moderados para Tempo entre Chegadas:\n")
+print(outliers_chegadas$moderados)
+cat("Outliers extremos para Tempo entre Chegadas:\n")
+print(outliers_chegadas$extremos)
+
+ggplot(tempoChegadas, aes(y = x)) +
+  geom_boxplot() +
+  ggtitle("Outliers Tempo entre Chegadas") +
+  ylab("Tempo entre Chegadas") +
+  theme_minimal()
+```
+
+# Outliers Tempo de Serviço
+```{r}
+outliers_servico <- identificar_outliers(tempoServico$x)
+cat("Outliers moderados para Tempo de Serviço:\n")
+print(outliers_servico$moderados)
+cat("Outliers extremos para Tempo de Serviço:\n")
+print(outliers_servico$extremos)
+
+ggplot(tempoServico, aes(y = x)) +
+  geom_boxplot() +
+  ggtitle("Outliers de Tempo de Serviço") +
+  ylab("Tempo de Serviço") +
+  theme_minimal()
+```
+
+# Histograma para Tempo entre Chegadas
+```{r}
+ggplot(tempoChegadas, aes(x = x)) +
+  geom_histogram(binwidth = 1, fill = "blue", color = "black", alpha = 0.7) +
+  labs(title = "Histograma para Tempo entre Chegadas", x = "Tempo entre Chegadas", y = "Frequência") +
+  theme_minimal()
+```
+
+# Histograma para Tempo de Serviço
+```{r}
+ggplot(tempoServico, aes(x = x)) +
+  geom_histogram(binwidth = 1, fill = "blue", color = "black", alpha = 0.7) +
+  labs(title = "Histograma para Tempo de Serviço", x = "Tempo de Serviço", y = "Frequência") +
+  theme_minimal()
+```
+
+#
+```{r}
+
+```
+
+#
+```{r}
+
+```
+
+#
+```{r}
+
+```
+
+#
+```{r}
+
+```
+
+#
+```{r}
+
+```
+
+#
+```{r}
+
+```
+
+#
+```{r}
+
+```
+
+#
+```{r}
+
+```
+
