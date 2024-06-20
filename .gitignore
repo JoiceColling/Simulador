@@ -1,2 +1,4 @@
 .devcontainer
 .github
+.data
+app/templates/result.html

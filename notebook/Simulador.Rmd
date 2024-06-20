@@ -1,12 +1,14 @@
 # Pacotes necessários
 ```{r}
+install.packages(c("ggplot2", "rmarkdown"))
 library(ggplot2)
+library(rmarkdown)
 ```
 
 # Carregar datasets
 ```{r}
-tempoChegadas <- read.csv("./data/tc.txt")
-tempoServico <- read.csv("./data/ts.txt")
+tempoChegadas <- read.csv("../data/tc.txt")
+tempoServico <- read.csv("../data/ts.txt")
 ```
 
 # Função para calcular a moda

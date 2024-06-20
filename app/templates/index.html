@@ -1,37 +1,45 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulador de Suporte Online</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <title>Upload de Arquivos</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
-    <h1>Simulador de Suporte Online</h1>
-    <form id="simulation-form">
-        <label for="num_profissionais">Número de Profissionais:</label>
-        <input type="number" id="num_profissionais" name="num_profissionais" required>
+    <h1>Upload de Arquivos</h1>
+    <form id="upload-form" enctype="multipart/form-data">
+        <label for="file1">Arquivo de Tempo de Chegada:</label>
+        <input type="file" id="file1" name="file1" required>
         <br>
-        <label for="run_time">Tempo de Simulação:</label>
-        <input type="number" id="run_time" name="run_time" required>
+        <label for="file2">Arquivo de Tempo de Serviço:</label>
+        <input type="file" id="file2" name="file2" required>
         <br>
-        <button type="submit">Executar Simulação</button>
+        <button type="submit">Upload</button>
     </form>
-    <div id="results">
-        <h2>Resultados</h2>
-        <p id="avg_wait_time"></p>
-    </div>
+    <h2>Resultado da Análise</h2>
+    <div id="result"></div>
+
     <script>
-        document.getElementById('simulation-form').addEventListener('submit', function(event) {
-            event.preventDefault();
-            const formData = new FormData(this);
-            fetch('/simulate', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('avg_wait_time').innerText = `Tempo Médio de Espera: ${data.avg_wait_time.toFixed(2)} unidades de tempo`;
+        $(document).ready(function(){
+            $("#upload-form").on("submit", function(event){
+                event.preventDefault();
+                var formData = new FormData(this);
+                $.ajax({
+                    url: "/upload",
+                    type: "POST",
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function(response){
+                        if(response.success){
+                            $("#result").html('<p>Files processed successfully. You can view the results <a href="/result">here</a>.</p>');
+                        } else {
+                            $("#result").html('<p>Error: ' + response.message + '</p>');
+                        }
+                    },
+                    error: function(response){
+                        $("#result").html('<p>An error occurred: ' + response.responseJSON.error + '</p>');
+                    }
+                });
             });
         });
     </script>
