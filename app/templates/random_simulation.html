@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Simulação Randômica</h2>
+    <form action="{{ url_for('run_random_simulation') }}" method="post">
+        <div class="form-group">
+            <label for="num_simulations">Número de Simulações</label>
+            <input type="number" class="form-control" id="num_simulations" name="num_simulations" min="1" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Rodar Simulação Randômica</button>
+    </form>
+    <div id="random-simulation-result" class="mt-4"></div>
+
+    <script>
+        $('form').on('submit', function(event) {
+            event.preventDefault();
+            const numSimulations = $('#num_simulations').val();
+            $.post('{{ url_for("run_random_simulation") }}', { num_simulations: numSimulations }, function(data) {
+                $('#random-simulation-result').html('<pre>' + JSON.stringify(data, null, 2) + '</pre>');
+            });
+        });
+    </script>
+</div>
+{% endblock %}

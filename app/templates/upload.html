@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Upload de Arquivos</h1>
+    <form id="upload-form" enctype="multipart/form-data">
+        <label for="file1">Arquivo de Tempo de Chegada:</label>
+        <br/>
+        <input type="file" id="file1" name="file1" required>
+        <br>
+        <label for="file2">Arquivo de Tempo de Serviço:</label>
+        <br/>
+        <input type="file" id="file2" name="file2" required>
+        
+        <br>
+        <br/>
+        <button type="submit" class="btn btn-primary">Upload</button>
+    </form>
+    <div id="result"></div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function(){
+        $("#upload-form").on("submit", function(event){
+            event.preventDefault();
+            var formData = new FormData(this);
+            $.ajax({
+                url: "/postData",
+                type: "POST",
+                data: formData,
+                contentType: false,
+                processData: false,
+                success: function(response){
+                    $("#result").html(response); // Exibe a resposta do servidor na div #result
+                },
+                error: function(response){
+                    $("#result").html('<p>An error occurred: ' + response.responseText + '</p>');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

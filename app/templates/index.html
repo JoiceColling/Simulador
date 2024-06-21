@@ -1,47 +1,6 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Upload de Arquivos</title>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-</head>
-<body>
-    <h1>Upload de Arquivos</h1>
-    <form id="upload-form" enctype="multipart/form-data">
-        <label for="file1">Arquivo de Tempo de Chegada:</label>
-        <input type="file" id="file1" name="file1" required>
-        <br>
-        <label for="file2">Arquivo de Tempo de Serviço:</label>
-        <input type="file" id="file2" name="file2" required>
-        <br>
-        <button type="submit">Upload</button>
-    </form>
-    <h2>Resultado da Análise</h2>
-    <div id="result"></div>
+{% extends "base.html" %}
 
-    <script>
-        $(document).ready(function(){
-            $("#upload-form").on("submit", function(event){
-                event.preventDefault();
-                var formData = new FormData(this);
-                $.ajax({
-                    url: "/upload",
-                    type: "POST",
-                    data: formData,
-                    contentType: false,
-                    processData: false,
-                    success: function(response){
-                        if(response.success){
-                            $("#result").html('<p>Files processed successfully. You can view the results <a href="/result">here</a>.</p>');
-                        } else {
-                            $("#result").html('<p>Error: ' + response.message + '</p>');
-                        }
-                    },
-                    error: function(response){
-                        $("#result").html('<p>An error occurred: ' + response.responseJSON.error + '</p>');
-                    }
-                });
-            });
-        });
-    </script>
-</body>
-</html>
+{% block content %}
+    <h1>Bem-vindo ao Simulador de ADS</h1>
+    <p>Use as abas acima para navegar entre as diferentes funcionalidades.</p>
+{% endblock %}
