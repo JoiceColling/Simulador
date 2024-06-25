@@ -1,5 +1,0 @@
-Flask
-SimPy
-Pandas
-Numpy
-Scipy

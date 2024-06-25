@@ -10,6 +10,7 @@ Este é um projeto de simulação de suporte online usando SimPy e Flask, onde s
 - Pandas
 - Numpy
 - Scipy
+- SocketIO
 
 ## Instalação
 
@@ -22,7 +23,7 @@ git clone https://github.com/JoiceColling/Simulador.git
 
 Certifique-se de estar no diretório raiz do projeto e execute o comando:
 ```bash
-pip install -r package.txt
+pip install -r requirements.txt
 ```
 
 Isso instalará todas as dependências necessárias para rodar o projeto.

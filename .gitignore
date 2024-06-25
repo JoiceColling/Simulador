@@ -1,4 +1,7 @@
 .devcontainer
 .github
-.data
-app/templates/result.html
+data
+data_upload
+data_output
+notebook/result_files/figure-html
+notebook/result*

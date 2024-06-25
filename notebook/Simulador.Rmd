@@ -1,14 +1,29 @@
+---
+title: "Simulador de Análise"
+output:
+  html_document:
+    keep_md: true
+    self_contained: true
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
 # Pacotes necessários
 ```{r}
-install.packages(c("ggplot2", "rmarkdown"))
+install.packages(c("ggplot2", "rmarkdown", "jsonlite"))
 library(ggplot2)
 library(rmarkdown)
+library(jsonlite)
+
 ```
 
 # Carregar datasets
 ```{r}
-tempoChegadas <- read.csv("../data/tc.txt")
-tempoServico <- read.csv("../data/ts.txt")
+tempoChegadas <- read.csv("../data_upload/tc.txt")
+tempoServico <- read.csv("../data_upload/ts.txt")
 ```
 
 # Função para calcular a moda
@@ -136,11 +151,39 @@ ggplot(tempoServico, aes(x = x)) +
 
 #
 ```{r}
+# Criar data frames para as estatísticas
+stats_chegadas <- data.frame(
+  media = media_chegadas,
+  mediana = mediana_chegadas,
+  moda = moda_chegadas,
+  desvio_padrao = desvio_padrao_chegadas,
+  maximo = maximo_chegadas,
+  minimo = minimo_chegadas
+)
 
+stats_servico <- data.frame(
+  media = media_servico,
+  mediana = mediana_servico,
+  moda = moda_servico,
+  desvio_padrao = desvio_padrao_servico,
+  maximo = maximo_servico,
+  minimo = minimo_servico
+)
+
+# Criar uma lista com todas as estatísticas e outliers
+resultados <- list(
+  stats_chegadas = stats_chegadas,
+  stats_servico = stats_servico,
+  outliers_chegadas = outliers_chegadas,
+  outliers_servico = outliers_servico
+)
 ```
 
 #
 ```{r}
+# Salvar os resultados em um arquivo JSON
+
+write_json(resultados, "../data_output/resultados.json")
 
 ```
 

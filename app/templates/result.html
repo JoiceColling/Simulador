@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Resultados da Análise</h1>
+    
+    <h2>Estatísticas Descritivas</h2>
+    <h3>Tempo entre Chegadas</h3>
+    <ul>
+        {% for stat in stats_chegadas %}
+            <li>{{ stat }}</li>
+        {% endfor %}
+    </ul>
+    
+    <h3>Tempo de Serviço</h3>
+    <ul>
+        {% for stat in stats_servico %}
+            <li>{{ stat }}</li>
+        {% endfor %}
+    </ul>
+    
+    <h2>Outliers</h2>
+    <h3>Tempo entre Chegadas</h3>
+    <p>Outliers Moderados: {{ outliers_chegadas.moderados }}</p>
+    <p>Outliers Extremos: {{ outliers_chegadas.extremos }}</p>
+    
+    <h3>Tempo de Serviço</h3>
+    <p>Outliers Moderados: {{ outliers_servico.moderados }}</p>
+    <p>Outliers Extremos: {{ outliers_servico.extremos }}</p>
+</div>
+{% endblock %}

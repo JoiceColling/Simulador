@@ -6,14 +6,27 @@ import pandas as pd
 import numpy as np
 from scipy import stats
 import random
+import subprocess
+import json
+from flask_socketio import SocketIO, emit
+import time
+from threading import Thread, Lock
+from queue import Queue
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
+socketio = SocketIO(app)
 
-UPLOAD_FOLDER = os.path.join(os.getcwd(), 'data')
+UPLOAD_FOLDER = os.path.join(os.getcwd(), '../data_upload')
+DIR_ = os.path.join(os.getcwd())
+JSON_DATA = os.path.join(os.getcwd(), 'data_output')
 ALLOWED_EXTENSIONS = {'txt', 'csv'}
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['JSON_DATA'] = JSON_DATA
+app.config['DIR_'] = DIR_
+
+
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -49,25 +62,37 @@ def process_uploaded_files(file1, file2):
 def index():
     return render_template('index.html')
 
+@app.route('/upload_page')
+def upload_page():
+    return render_template('upload.html')
+
 @app.route('/postData', methods=['POST'])
 def postData():
     try:
-        file1 = request.files['file1']
-        file2 = request.files['file2']
+        file1 = request.files['tc']
+        file2 = request.files['ts']
+
+        print("Received files:", file1.filename, file2.filename)  # Depuração
 
         if file1.filename == '' or file2.filename == '':
             return jsonify({'error': 'Please select both files'})
 
         if file1 and allowed_file(file1.filename) and file2 and allowed_file(file2.filename):
-            file1.save(os.path.join(app.config['UPLOAD_FOLDER'], 'file1.csv'))
-            file2.save(os.path.join(app.config['UPLOAD_FOLDER'], 'file2.csv'))
+            file1_path = os.path.join(app.config['UPLOAD_FOLDER'], 'tc.txt')
+            file2_path = os.path.join(app.config['UPLOAD_FOLDER'], 'ts.txt')
             
-            flash('Files uploaded successfully', 'success')
+            file1.save(file1_path)
+            file2.save(file2_path)
+
+            print("Files saved to:", file1_path, file2_path)  # Depuração
+            
             return jsonify({'success': 'Files uploaded successfully'})
 
         return jsonify({'error': 'Allowed file types are txt and csv'})
     except Exception as e:
+        print("Error:", e)  # Depuração
         return jsonify({'error': str(e)})
+    
 
 @app.route('/upload', methods=['GET'])
 def upload():
@@ -76,32 +101,39 @@ def upload():
 
 @app.route('/result')
 def result():
-    file1_path = os.path.join(app.config['UPLOAD_FOLDER'], 'file1.txt')
-    file2_path = os.path.join(app.config['UPLOAD_FOLDER'], 'file2.txt')
-
     try:
-        df1 = pd.read_csv(file1_path)
-        df2 = pd.read_csv(file2_path)
+        # Caminho para o script R Markdown
+        r_script_path = os.path.join(os.getcwd(), 'notebook', 'Simulador.Rmd')
 
-        # Perform statistical analysis
-        data1 = df1['x']
-        data2 = df2['x']
+        # Instalar o pacote rmarkdown, caso não esteja instalado
+        subprocess.run(['Rscript', '-e', 'if(!requireNamespace("rmarkdown", quietly = TRUE)) install.packages("rmarkdown")'], check=True)
 
-        stats1 = calculate_statistics(data1)
-        stats2 = calculate_statistics(data2)
+        # Executar o Rscript para renderizar o Rmd
+        result = subprocess.run(['Rscript', '-e', 'rmarkdown::render("notebook/Simulador.Rmd", output_format="html_document", output_file="result.html")'], capture_output=True, text=True)
 
-        outliers1 = identify_outliers(data1)
-        outliers2 = identify_outliers(data2)
+        if result.returncode != 0:
+            raise Exception(f"R script failed: {result.stderr}")
 
-        return render_template('result.html', stats1=stats1, stats2=stats2, outliers1=outliers1, outliers2=outliers2)
+       # Caminho do arquivo JSON gerado pelo script R
+        resultados_path = os.path.join(app.config['JSON_DATA'], 'resultados.json')
 
+        # Verificar se o arquivo existe
+        if not os.path.exists(resultados_path):
+            raise FileNotFoundError(f"{resultados_path} not found.")
+
+        # Carregar dados do arquivo JSON
+        with open(resultados_path, 'r') as f:
+            resultados = json.load(f)
+
+        return render_template('result.html', 
+                               stats_chegadas=resultados['stats_chegadas'], 
+                               stats_servico=resultados['stats_servico'], 
+                               outliers_chegadas=resultados['outliers_chegadas'], 
+                               outliers_servico=resultados['outliers_servico'])
+                               
     except Exception as e:
         flash(f'Error processing files: {str(e)}', 'error')
-        return redirect(url_for('result'))
-
-@app.route('/simulation')
-def simulation():
-    return render_template('simulation.html')
+        return redirect(url_for('index'))
 
 @app.route('/run_simulation', methods=['POST'])
 def run_simulation():
@@ -130,6 +162,79 @@ def run_random_simulation():
 @app.route('/evaluation')
 def evaluation():
     return render_template('evaluation.html')
+
+@app.route('/simulation')
+def simulation():
+    return render_template('simulation.html')
+    
+@socketio.on('start_simulation')
+def start_simulation(data):
+    try:
+        tc_path = os.path.join(os.getcwd(), 'data_upload', 'tc.txt')
+        ts_path = os.path.join(os.getcwd(), 'data_upload', 'ts.txt')  
+
+        queue = Queue()
+
+        if not os.path.exists(tc_path) or not os.path.exists(ts_path):
+            emit('simulation_error', {'error': 'Files not found'})
+            return
+        
+        num_funcionarios = int(data['num_funcionarios'])
+
+        tc = pd.read_csv(tc_path)
+        ts = pd.read_csv(ts_path)
+
+        # Limpar a fila antes de começar uma nova simulação
+        with queue.mutex:
+            queue.queue.clear()
+
+        # Preencher a fila com as observações
+        for i in range(len(tc)):
+            chegada = int(tc.iloc[i].x)  # Converter para int
+            servico = int(ts.iloc[i].x)  # Converter para int
+            queue.put((chegada, servico))
+
+        # Lista para manter referência aos threads
+        threads = []
+
+                # Função para simular o atendimento de cada observação
+        def atender():
+            while True:
+                try:
+                    chegada, servico = queue.get(block=True)
+
+                    # Emitir atualização de chegada
+                    with app.app_context():
+                        socketio.emit('simulation_update', {'chegada': chegada, 'servico': servico})
+
+                    # Simular tempo de serviço
+                    time.sleep(servico)  # Simulação simples de tempo de serviço
+
+                    # Emitir conclusão do serviço
+                    with app.app_context():
+                        socketio.emit('simulation_update', {'message': f'Concluído: Chegada {chegada}, Serviço {servico}'})
+
+                    # Indicar que o serviço foi concluído
+                    queue.task_done()
+
+                except Exception as e:
+                    break
+
+        # Criar e iniciar os threads (funcionários)
+        for _ in range(num_funcionarios):
+            thread = Thread(target=atender)
+            thread.start()
+            threads.append(thread)
+
+        # Aguardar até todos os threads concluírem
+        for thread in threads:
+            thread.join()
+
+        # Emitir mensagem de simulação completa
+        emit('simulation_complete', {'message': 'Simulação completa'})
+
+    except Exception as e:
+        emit('simulation_error', {'error': str(e)})
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -12,10 +12,10 @@
         <div class="collapse navbar-collapse">
             <ul class="navbar-nav mr-auto">
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('upload') }}">Upload</a>
+                    <a class="nav-link" href="{{ url_for('upload_page') }}">Upload</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('result') }}">Análise do arquivos</a>
+                    <a class="nav-link" href="{{ url_for('result') }}">Resultado da Análise</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('simulation') }}">Simulação dos Dados Fornecidos</a>
@@ -30,15 +30,14 @@
         </div>
     </nav>
 
-    <div class="container">
+    <div class="container mt-4">
         {% block content %}
-        <!-- Conteúdo padrão se o bloco não for estendido -->
         <h1>Bem-vindo ao Simulador de ADS</h1>
         <p>Use as abas acima para navegar entre as diferentes funcionalidades.</p>
         {% endblock %}
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
 </body>

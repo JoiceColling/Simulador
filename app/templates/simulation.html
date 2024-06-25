@@ -1,25 +1,48 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-4">
     <h2>Simulação dos Dados Fornecidos</h2>
-    <form action="{{ url_for('run_simulation') }}" method="post">
-        <div class="form-group">
-            <label for="num_simulations">Número de Simulações</label>
-            <input type="number" class="form-control" id="num_simulations" name="num_simulations" min="1" required>
-        </div>
-        <button type="submit" class="btn btn-primary">Rodar Simulação</button>
-    </form>
-    <div id="simulation-result" class="mt-4"></div>
+    <button id="startSimulation" class="btn btn-primary">Iniciar Simulação</button>
+    <div>
+        <label for="numFuncionarios">Número de Funcionários:</label>
+        <input type="number" id="numFuncionarios" value="1" min="1" max="10">
+    </div>
+    <div id="simulationResults">
+        <ul id="simulationList"></ul>
+    </div>
+    
+    <!-- Importação do jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- Importação do Socket.IO -->
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
 
     <script>
-        $('form').on('submit', function(event) {
-            event.preventDefault();
-            const numSimulations = $('#num_simulations').val();
-            $.post('{{ url_for("run_simulation") }}', { num_simulations: numSimulations }, function(data) {
-                $('#simulation-result').html('<pre>' + JSON.stringify(data, null, 2) + '</pre>');
+        $(document).ready(function() {
+            var socket = io();
+
+            // Função para iniciar a simulação ao clicar no botão
+            $('#startSimulation').click(function() {
+                $('#simulationList').empty();  // Limpa a lista de resultados
+
+                var numFuncionarios = $('#numFuncionarios').val();  // Obtém o número de funcionários
+                socket.emit('start_simulation', { num_funcionarios: numFuncionarios });  // Envia para o servidor via Socket.IO
+            });
+
+            // Recebe atualizações de progresso da simulação
+            socket.on('simulation_update', function(data) {
+                $('#simulationList').append('<li>Chegada: ' + data.chegada + ', Serviço: ' + data.servico + '</li>');
+            });
+
+            // Recebe mensagem de conclusão da simulação
+            socket.on('simulation_complete', function(data) {
+                $('#simulationList').append('<li>' + data.message + '</li>');
+            });
+
+            // Recebe mensagem de erro da simulação
+            socket.on('simulation_error', function(data) {
+                alert(data.error);
             });
         });
     </script>
-</div>
 {% endblock %}
