@@ -5,3 +5,4 @@ data_upload
 data_output
 notebook/result_files/figure-html
 notebook/result*
+__pycache__

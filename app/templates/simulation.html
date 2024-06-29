@@ -1,48 +1,78 @@
 {% extends "base.html" %}
 
 {% block content %}
+<div class="container mt-5">
     <h2>Simulação dos Dados Fornecidos</h2>
-    <button id="startSimulation" class="btn btn-primary">Iniciar Simulação</button>
-    <div>
-        <label for="numFuncionarios">Número de Funcionários:</label>
-        <input type="number" id="numFuncionarios" value="1" min="1" max="10">
+    <div class="mb-3">
+        <label for="numFuncionarios" class="form-label">Número de Funcionários:</label>
+        <input type="number" id="numFuncionarios" class="form-control" value="1" min="1" max="10">
     </div>
+
+    <div class="mb-3">
+        <button id="startSimulation" class="btn btn-primary me-3">Iniciar Simulação</button>
+        <button id="stopSimulation" class="btn btn-danger">Parar Simulação</button>
+    </div>
+
     <div id="simulationResults">
-        <ul id="simulationList"></ul>
+        <ul id="simulationList" class="list-group"></ul>
     </div>
-    
-    <!-- Importação do jQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    
-    <!-- Importação do Socket.IO -->
-    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+</div>
 
-    <script>
-        $(document).ready(function() {
-            var socket = io();
+<script>
+    $(document).ready(function() {
+        var socket = io();
 
-            // Função para iniciar a simulação ao clicar no botão
-            $('#startSimulation').click(function() {
-                $('#simulationList').empty();  // Limpa a lista de resultados
+        // Função para iniciar a simulação ao clicar no botão
+        $('#startSimulation').click(function() {
+            $('#simulationList').empty();  // Limpa a lista de resultados
 
-                var numFuncionarios = $('#numFuncionarios').val();  // Obtém o número de funcionários
-                socket.emit('start_simulation', { num_funcionarios: numFuncionarios });  // Envia para o servidor via Socket.IO
-            });
-
-            // Recebe atualizações de progresso da simulação
-            socket.on('simulation_update', function(data) {
-                $('#simulationList').append('<li>Chegada: ' + data.chegada + ', Serviço: ' + data.servico + '</li>');
-            });
-
-            // Recebe mensagem de conclusão da simulação
-            socket.on('simulation_complete', function(data) {
-                $('#simulationList').append('<li>' + data.message + '</li>');
-            });
-
-            // Recebe mensagem de erro da simulação
-            socket.on('simulation_error', function(data) {
-                alert(data.error);
-            });
+            var numFuncionarios = $('#numFuncionarios').val();  // Obtém o número de funcionários
+            socket.emit('start_simulation', { num_funcionarios: numFuncionarios });  // Envia para o servidor via Socket.IO
         });
-    </script>
+
+        // Função para parar a simulação ao clicar no botão
+        $('#stopSimulation').click(function() {
+            socket.emit('stop_simulation');  // Envia para o servidor via Socket.IO
+        });
+
+        // Recebe atualizações de progresso da simulação
+        socket.on('simulation_update', function(data) {
+            var os_name = data.os_name;
+            var item = $('#' + os_name.replace(':', '\\:'));
+
+            if (item.length === 0) {
+                var statusClass = data.status === 'in_progress' ? 'list-group-item list-group-item-warning' : 'list-group-item';
+                if (data.status === 'pending') {
+                    statusClass = 'list-group-item list-group-item-danger';
+                }
+                $('#simulationList').append('<li id="' + os_name + '" class="' + statusClass + '">' + os_name + ' - Chegada: ' + data.chegada + ', Serviço: ' + data.servico + ' - Status: ' + data.status + '</li>');
+            } else {
+                var statusText = os_name + ' - Chegada: ' + data.chegada + ', Serviço: ' + data.servico + ' - Status: ' + data.status;
+                if (data.status === 'in_progress') {
+                    statusText += ', Funcionário: ' + data.funcionario;  // Adiciona o nome do funcionário
+                }
+                item.text(statusText);
+                item.removeClass('list-group-item-success list-group-item-info list-group-item-warning list-group-item-danger');  // Limpa classes anteriores
+                if (data.status === 'completed') {
+                    item.addClass('list-group-item-success');  // Estilo para simulação concluída
+                } else if (data.status === 'in_progress') {
+                    item.addClass('list-group-item-warning');  // Estilo para simulação em progresso
+                } else if (data.status === 'pending') {
+                    item.addClass('list-group-item-danger');  // Estilo para simulação pendente
+                }
+            }
+        });
+
+        // Recebe mensagem de conclusão da simulação
+        socket.on('simulation_complete', function(data) {
+            $('#simulationList').append('<li class="list-group-item list-group-item-success">' + data.message + '</li>');
+        });
+
+        // Recebe mensagem de erro da simulação
+        socket.on('simulation_error', function(data) {
+            alert(data.error);
+        });
+    });
+</script>
+
 {% endblock %}

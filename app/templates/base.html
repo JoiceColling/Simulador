@@ -3,7 +3,12 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- Importação do jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- Importação do Socket.IO -->
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
     <title>Simulador de ADS</title>
 </head>
 <body>
@@ -15,7 +20,7 @@
                     <a class="nav-link" href="{{ url_for('upload_page') }}">Upload</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('result') }}">Resultado da Análise</a>
+                    <a class="nav-link" href="{{ url_for('result') }}">Estatísticas</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('simulation') }}">Simulação dos Dados Fornecidos</a>

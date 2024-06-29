@@ -2,30 +2,80 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h1>Resultados da Análise</h1>
-    
-    <h2>Estatísticas Descritivas</h2>
     <h3>Tempo entre Chegadas</h3>
-    <ul>
-        {% for stat in stats_chegadas %}
-            <li>{{ stat }}</li>
-        {% endfor %}
-    </ul>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Média</th>
+                <th>Mediana</th>
+                <th>Moda</th>
+                <th>Desvio Padrão</th>
+                <th>Máximo</th>
+                <th>Mínimo</th>
+                <th>Outliers Moderados</th>
+                <th>Outliers Extremos</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for stat in stats_chegadas %}
+            <tr>
+                <td>{{ stat.media }}</td>
+                <td>{{ stat.mediana }}</td>
+                <td>{{ stat.moda }}</td>
+                <td>{{ stat.desvio_padrao }}</td>
+                <td>{{ stat.maximo }}</td>
+                <td>{{ stat.minimo }}</td>
+                <td>{{ outliers_chegadas.moderados }}</td>
+                <td>{{ outliers_chegadas.extremos }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
     
     <h3>Tempo de Serviço</h3>
-    <ul>
-        {% for stat in stats_servico %}
-            <li>{{ stat }}</li>
-        {% endfor %}
-    </ul>
-    
-    <h2>Outliers</h2>
-    <h3>Tempo entre Chegadas</h3>
-    <p>Outliers Moderados: {{ outliers_chegadas.moderados }}</p>
-    <p>Outliers Extremos: {{ outliers_chegadas.extremos }}</p>
-    
-    <h3>Tempo de Serviço</h3>
-    <p>Outliers Moderados: {{ outliers_servico.moderados }}</p>
-    <p>Outliers Extremos: {{ outliers_servico.extremos }}</p>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Média</th>
+                <th>Mediana</th>
+                <th>Moda</th>
+                <th>Desvio Padrão</th>
+                <th>Máximo</th>
+                <th>Mínimo</th>
+                <th>Outliers Moderados</th>
+                <th>Outliers Extremos</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for stat in stats_servico %}
+            <tr>
+                <td>{{ stat.media }}</td>
+                <td>{{ stat.mediana }}</td>
+                <td>{{ stat.moda }}</td>
+                <td>{{ stat.desvio_padrao }}</td>
+                <td>{{ stat.maximo }}</td>
+                <td>{{ stat.minimo }}</td>
+                <td>{{ outliers_servico.moderados }}</td>
+                <td>{{ outliers_servico.extremos }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <button id="reprocess-button" class="btn btn-primary">Reprocessar Dados</button>
 </div>
+
+<script>
+document.getElementById('reprocess-button').addEventListener('click', function() {
+    fetch('/reprocess', { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert('Erro ao reprocessar dados: ' + data.error);
+            }
+        });
+});
+</script>
 {% endblock %}
