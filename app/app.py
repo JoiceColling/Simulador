@@ -17,9 +17,10 @@ app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 socketio = SocketIO(app)
 
-UPLOAD_FOLDER = os.path.join(os.getcwd(), 'data_upload')
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data_upload')
+
 DIR_ = os.path.join(os.getcwd())
-JSON_DATA = os.path.join(os.getcwd(), 'data_output')
+JSON_DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data_output')
 ALLOWED_EXTENSIONS = {'txt', 'csv'}
 
 # Caminhos para os arquivos de dados randômicos
