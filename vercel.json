@@ -1,6 +1,19 @@
 {
   "version": 2,
   "builds": [
-    { "src": "app/app.py", "use": "@vercel/python" }
-  ]
+    { "src": "app", "use": "@vercel/python",
+    "config": {
+      "maxLambdaSize": "15mb",
+      "runtimeVersion": "3.12"
+    } }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "app/server.py"
+    }
+  ],
+  "env": {
+    "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY": "pk_test"
+  }
 }
