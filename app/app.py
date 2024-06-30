@@ -22,6 +22,12 @@ DIR_ = os.path.join(os.getcwd())
 JSON_DATA = os.path.join(os.getcwd(), 'data_output')
 ALLOWED_EXTENSIONS = {'txt', 'csv'}
 
+# Caminhos para os arquivos de dados randômicos
+data_folder = os.path.join(os.getcwd(), 'data_output')
+random_chegada_path = os.path.join(data_folder, 'random_chegada.txt')
+random_servico_path = os.path.join(data_folder, 'random_servico.txt')
+
+
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['JSON_DATA'] = JSON_DATA
 app.config['DIR_'] = DIR_
@@ -29,6 +35,8 @@ app.config['DIR_'] = DIR_
 # Evento para parar a simulação
 stop_event = Event()
 
+# Evento para parar a simulação aleatória
+random_stop_event = Event()
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -42,6 +50,19 @@ def process_uploaded_files(file1, file2):
     except Exception as e:
         return None, None
 
+# Função para ler médias do arquivo JSON
+def read_medias_from_json():
+    with open(os.path.join(app.config['JSON_DATA'], 'resultados.json'), 'r') as f:
+        dados = json.load(f)
+    media_chegada = dados['stats_chegadas'][0]['media']
+    media_servico = dados['stats_servico'][0]['media']
+    return media_chegada, media_servico
+
+# Função para contar número de linhas em um arquivo
+def count_lines(filepath):
+    with open(filepath, 'r') as f:
+        return sum(1 for line in f)
+    
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -140,29 +161,9 @@ def reprocess():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
     
-@app.route('/run_simulation', methods=['POST'])
-def run_simulation():
-    try:
-        num_simulations = int(request.form['num_simulations'])
-        # Simulate FIFO queue with random data
-        simulated_data = [random.randint(1, 100) for _ in range(num_simulations)]
-        return jsonify(simulated_data)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
-
 @app.route('/random_simulation')
 def random_simulation():
     return render_template('random_simulation.html')
-
-@app.route('/run_random_simulation', methods=['POST'])
-def run_random_simulation():
-    try:
-        num_simulations = int(request.form['num_simulations'])
-        # Simulate random data
-        random_data = [random.randint(1, 100) for _ in range(num_simulations)]
-        return jsonify(random_data)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
 
 @app.route('/evaluation')
 def evaluation():
@@ -307,11 +308,170 @@ def start_simulation(data):
     except Exception as e:
         emit('simulation_error', {'error': str(e)})
 
+
 @socketio.on('stop_simulation')
 def stop_simulation():
     global stop_event
     stop_event.set()  # Define o evento de parada
     emit('simulation_complete', {'message': 'Simulação parada pelo usuário'})
+
+@socketio.on('random_stop_simulation')
+def stop_simulation():
+    global random_stop_event
+    random_stop_event.set()  # Define o evento de parada
+    emit('random_simulation_complete', {'message': 'Simulação parada pelo usuário'})
+
+def calculate_std_dev_from_json(tipo):
+    with open(os.path.join(app.config['JSON_DATA'], 'resultados.json'), 'r') as f:
+        dados = json.load(f)
+    if tipo == 'chegadas':
+        desvio_padrao = dados['stats_chegadas'][0]['desvio_padrao']
+    elif tipo == 'servico':
+        desvio_padrao = dados['stats_servico'][0]['desvio_padrao']
+    return desvio_padrao
+
+@socketio.on('start_random_simulation')
+def start_random_simulation(data):
+    try:
+        if 'num_simulations' not in data:
+            emit('simulation_error', {'error': 'num_simulations not found in data'})
+            return
+
+        num_simulations = int(data['num_simulations'])
+
+        tc_path = os.path.join(app.config['UPLOAD_FOLDER'], 'tc.txt')
+        ts_path = os.path.join(app.config['UPLOAD_FOLDER'], 'ts.txt')
+
+        if not os.path.exists(tc_path) or not os.path.exists(ts_path):
+            emit('simulation_error', {'error': 'Files not found'})
+            return
+
+        media_chegada, media_servico = read_medias_from_json()
+        desvio_padrao_chegada = calculate_std_dev_from_json('chegadas')
+        desvio_padrao_servico = calculate_std_dev_from_json('servico')
+
+        random_chegada = np.random.normal(loc=media_chegada, scale=desvio_padrao_chegada, size=num_simulations).astype(int)
+        random_servico = np.random.normal(loc=media_servico, scale=desvio_padrao_servico, size=num_simulations).astype(int)
+
+        random_chegada = np.clip(random_chegada, 0, None)
+        random_servico = np.clip(random_servico, 0, None)
+
+        with open(os.path.join(app.config['UPLOAD_FOLDER'], 'random_chegada.txt'), 'w') as f_random_chegada:
+            for value in random_chegada:
+                f_random_chegada.write(f"{value}\n")
+
+        with open(os.path.join(app.config['UPLOAD_FOLDER'], 'random_servico.txt'), 'w') as f_random_servico:
+            for value in random_servico:
+                f_random_servico.write(f"{value}\n")
+
+        num_funcionarios = int(data['num_funcionarios'])
+        simulate_queue(num_simulations, num_funcionarios, random_chegada, random_servico)
+
+        emit('random_simulation_complete', {'message': 'Simulação completa'})
+    except Exception as e:
+        emit('simulation_error', {'error': str(e)})
+
+def simulate_queue(num_simulations, num_funcionarios, random_chegada, random_servico):
+    global random_stop_event
+    random_stop_event.clear()
+
+    queue = Queue()
+
+    def adicionar_os():
+        start_time = time.time()
+        chegada_anterior = 0
+
+        for i in range(len(random_chegada)):
+            if random_stop_event.is_set():
+                break
+
+            chegada = int(random_chegada[i])
+            servico = int(random_servico[i])
+            os_name = f"OS-{i+1}"
+
+            absolute_chegada = start_time + chegada_anterior + chegada
+            timestamp_chegada = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(absolute_chegada))
+            chegada_anterior += chegada
+
+            wait_time = absolute_chegada - time.time()
+            if wait_time > 0 and not random_stop_event.is_set():
+                time.sleep(wait_time)
+
+            if random_stop_event.is_set():
+                break
+
+            queue.put((timestamp_chegada, chegada, servico, os_name, 'pending'))
+
+            socketio.emit('random_simulation_update', {
+                'os_name': os_name,
+                'timestamp_chegada': timestamp_chegada,
+                'chegada': chegada,
+                'servico': servico,
+                'status': 'pending'
+            })
+
+    thread_adicionar_os = Thread(target=adicionar_os)
+    thread_adicionar_os.start()
+
+    threads_funcionarios = []
+
+    def atender(funcionario_name):
+        while not random_stop_event.is_set():
+            try:
+                if not queue.empty():
+                    timestamp_chegada, chegada, servico, os_name, status = queue.get(block=True, timeout=1)
+                    if random_stop_event.is_set():
+                        break
+
+                    socketio.emit('random_simulation_update', {
+                        'os_name': os_name,
+                        'timestamp_chegada': timestamp_chegada,
+                        'chegada': chegada,
+                        'servico': servico,
+                        'status': 'in_progress',
+                        'funcionario': funcionario_name
+                    })
+
+                    time.sleep(servico)
+
+                    if random_stop_event.is_set():
+                        break
+
+                    socketio.emit('random_simulation_update', {
+                        'os_name': os_name,
+                        'timestamp_chegada': timestamp_chegada,
+                        'chegada': chegada,
+                        'servico': servico,
+                        'status': 'completed',
+                        'funcionario': funcionario_name
+                    })
+
+                    queue.task_done()
+                else:
+                    time.sleep(1)
+            except Exception as e:
+                print(f"Exception in thread {funcionario_name}: {type(e).__name__} - {e}")
+                break
+
+    for i in range(num_funcionarios):
+        thread = Thread(target=atender, args=(f'{i+1}',))
+        thread.start()
+        threads_funcionarios.append(thread)
+
+    thread_adicionar_os.join()
+
+    for thread in threads_funcionarios:
+        thread.join()
+
+    if not random_stop_event.is_set():
+        socketio.emit('random_simulation_complete', {'message': 'Simulação completa'})
+
+@socketio.on('stop_random_simulation')
+def stop_random_simulation():
+    global random_stop_event 
+    random_stop_event.set()  # Define o evento de parada
+    emit('random_simulation_complete', {'message': 'Simulação parada pelo usuário'})
+
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)
