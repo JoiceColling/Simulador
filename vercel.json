@@ -1,12 +1,6 @@
 {
   "version": 2,
   "builds": [
-    { "src": "app/app.py", "use": "@now/python" }
-  ],
-  "routes": [
-    { "src": "/(.*)", "dest": "app/app.py" }
-  ],
-  "env": {
-    "PYTHON_VERSION": "3.12" 
-  }
+    { "src": "app/app.py", "use": "@vercel/python" }
+  ]
 }
