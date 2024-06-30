@@ -180,8 +180,8 @@ def start_simulation(data):
     stop_event.clear()  # Reseta o evento de parada
 
     try:
-        tc_path = os.path.join(os.getcwd(), 'data_upload', 'tc.txt')
-        ts_path = os.path.join(os.getcwd(), 'data_upload', 'ts.txt')
+        tc_path = os.path.join(UPLOAD_FOLDER, 'tc.txt')
+        ts_path = os.path.join(UPLOAD_FOLDER, 'ts.txt')
 
         if not os.path.exists(tc_path) or not os.path.exists(ts_path):
             emit('simulation_error', {'error': 'Files not found'})
