@@ -6,9 +6,8 @@
     <div class="mb-3">
         <label for="num_simulations" class="form-label">Número de Simulações:</label>
         <input type="number" id="num_simulations" class="form-control" value="1" min="1">
-        <label for="num_simulations" class="form-label">Número de Funcionários:</label>
+        <label for="num_funcionarios" class="form-label">Número de Funcionários:</label>
         <input type="number" id="num_funcionarios" class="form-control" value="1" min="1">
-
     </div>
 
     <div class="mb-3">
@@ -18,6 +17,10 @@
 
     <div id="simulationResults">
         <ul id="simulationList" class="list-group"></ul>
+        <div id="stats" class="mt-3">
+            <p>Média de Tempo de Espera: <span id="mediaEspera"></span> segundos</p>
+            <p>Desvio Padrão do Tempo de Espera: <span id="desvioPadraoEspera"></span> segundos</p>
+        </div>
     </div>
 </div>
 
@@ -25,21 +28,20 @@
     $(document).ready(function() {
         var socket = io();
 
-        // Função para iniciar a simulação randômica ao clicar no botão
         $('#startSimulation').click(function() {
-            $('#simulationList').empty();  // Limpa a lista de resultados
+            $('#simulationList').empty();
+            $('#mediaEspera').text('');
+            $('#desvioPadraoEspera').text('');
 
-            var numSimulations = $('#num_simulations').val();  // Obtém o número de simulações
+            var numSimulations = $('#num_simulations').val();
             var numFuncionarios = $('#num_funcionarios').val();
-            socket.emit('start_random_simulation', { num_simulations: numSimulations, num_funcionarios:numFuncionarios });  // Envia para o servidor via Socket.IO
+            socket.emit('start_random_simulation', { num_simulations: numSimulations, num_funcionarios: numFuncionarios });
         });
 
-        // Função para parar a simulação randômica ao clicar no botão
         $('#stopSimulation').click(function() {
-            socket.emit('stop_random_simulation');  // Envia para o servidor via Socket.IO
+            socket.emit('stop_random_simulation');
         });
 
-        // Recebe atualizações de progresso da simulação randômica
         socket.on('random_simulation_update', function(data) {
             var os_name = data.os_name;
             var item = $('#' + os_name.replace(':', '\\:'));
@@ -49,34 +51,37 @@
                 if (data.status === 'pending') {
                     statusClass = 'list-group-item list-group-item-danger';
                 }
-                $('#simulationList').append('<li id="' + os_name + '" class="' + statusClass + '">' + os_name + ' - Chegada: ' + data.chegada + ', Serviço: ' + data.servico + ' - Status: ' + data.status + '</li>');
+                var tempo_espera = data.tempo_espera !== undefined ? ', Tempo de Espera: ' + data.tempo_espera.toFixed(2) : '';
+                $('#simulationList').append('<li id="' + os_name + '" class="' + statusClass + '">' + os_name + ' - Chegada: ' + data.chegada + ', Serviço: ' + data.servico + ' - Status: ' + data.status + tempo_espera + '</li>');
             } else {
                 var statusText = os_name + ' - Chegada: ' + data.chegada + ', Serviço: ' + data.servico + ' - Status: ' + data.status;
                 if (data.status === 'in_progress') {
-                    statusText += ', Funcionário: ' + data.funcionario;  // Adiciona o nome do funcionário
+                    statusText += ', Funcionário: ' + data.funcionario + ', Tempo de Espera: ' + data.tempo_espera.toFixed(2);
+                }else if (data.status === 'completed') {
+                    statusText +=  ', Tempo de Espera: ' + data.tempo_espera.toFixed(2) + ', Tempo de Conclusão: ' + data.tempo_conclusao.toFixed(2);
                 }
                 item.text(statusText);
-                item.removeClass('list-group-item-success list-group-item-info list-group-item-warning list-group-item-danger');  // Limpa classes anteriores
+                item.removeClass('list-group-item-success list-group-item-info list-group-item-warning list-group-item-danger');
                 if (data.status === 'completed') {
-                    item.addClass('list-group-item-success');  // Estilo para simulação concluída
+                    item.addClass('list-group-item-success');
                 } else if (data.status === 'in_progress') {
-                    item.addClass('list-group-item-warning');  // Estilo para simulação em progresso
+                    item.addClass('list-group-item-warning');
                 } else if (data.status === 'pending') {
-                    item.addClass('list-group-item-danger');  // Estilo para simulação pendente
+                    item.addClass('list-group-item-danger');
                 }
             }
         });
 
-        // Recebe mensagem de conclusão da simulação randômica
         socket.on('random_simulation_complete', function(data) {
             $('#simulationList').append('<li class="list-group-item list-group-item-success">' + data.message + '</li>');
+            console.log('random_simulation_complete:', data);
+            $('#mediaEspera').text(data.media_espera.toFixed(2));
+            $('#desvioPadraoEspera').text(data.desvio_padrao_espera.toFixed(2));
         });
 
-        // Recebe mensagem de erro da simulação randômica
         socket.on('random_simulation_error', function(data) {
             alert(data.error);
         });
     });
 </script>
-
 {% endblock %}

@@ -10,7 +10,7 @@ import subprocess
 import json
 from flask_socketio import SocketIO, emit
 import time
-from threading import Thread, Event, current_thread  
+from threading import Thread, Event
 from queue import Queue
 
 app = Flask(__name__)
@@ -177,7 +177,7 @@ def simulation():
 @socketio.on('start_simulation')
 def start_simulation(data):
     global stop_event
-    stop_event.clear()  # Reseta o evento de parada
+    stop_event.clear()
 
     try:
         tc_path = os.path.join(UPLOAD_FOLDER, 'tc.txt')
@@ -187,15 +187,13 @@ def start_simulation(data):
             emit('simulation_error', {'error': 'Files not found'})
             return
 
-        # Ler arquivos .txt como DataFrames
         tc = pd.read_csv(tc_path, header=None, names=['chegada'], delim_whitespace=True, skiprows=1)
         ts = pd.read_csv(ts_path, header=None, names=['servico'], delim_whitespace=True, skiprows=1)
 
         queue = Queue()
 
-        # Função para adicionar OSs à fila conforme o tempo de chegada
         def adicionar_os():
-            start_time = time.time()  # Tempo de início da simulação
+            start_time = time.time()
             chegada_anterior = 0
 
             for i in range(len(tc)):
@@ -203,16 +201,14 @@ def start_simulation(data):
                     break
 
                 try:
-                    chegada = float(tc.iloc[i]['chegada'])  # Converter para float
-                    servico = float(ts.iloc[i]['servico'])  # Converter para float
-                    os_name = f"OS-{i+1}"  # Nome da ordem de serviço
+                    chegada = float(tc.iloc[i]['chegada'])
+                    servico = float(ts.iloc[i]['servico'])
+                    os_name = f"OS-{i+1}"
 
-                    # Calcular o tempo absoluto de chegada
                     absolute_chegada = start_time + chegada_anterior + chegada
                     timestamp_chegada = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(absolute_chegada))
                     chegada_anterior += chegada
 
-                    # Esperar até o tempo absoluto de chegada da OS
                     wait_time = absolute_chegada - time.time()
                     if wait_time > 0 and not stop_event.is_set():
                         time.sleep(wait_time)
@@ -220,10 +216,8 @@ def start_simulation(data):
                     if stop_event.is_set():
                         break
 
-                    # Adicionar OS à fila com status pendente, timestamp de chegada e os_name
-                    queue.put((timestamp_chegada, chegada, servico, os_name, 'pending'))
+                    queue.put((absolute_chegada, chegada, servico, os_name, 'pending'))
 
-                    # Emitir atualização para exibir na tela
                     socketio.emit('simulation_update', {
                         'os_name': os_name,
                         'timestamp_chegada': timestamp_chegada,
@@ -237,73 +231,71 @@ def start_simulation(data):
                     emit('simulation_error', {'error': f'Erro de conversão na linha {i}: {e}'})
                     return
 
-        # Thread para adicionar OSs à fila
         thread_adicionar_os = Thread(target=adicionar_os)
         thread_adicionar_os.start()
 
-        # Lista para manter referência aos threads de funcionários
         threads_funcionarios = []
 
-        # Função para simular o atendimento de cada observação
         def atender(funcionario_name):
             while not stop_event.is_set():
                 try:
                     if not queue.empty():
-                        timestamp_chegada, chegada, servico, os_name, status = queue.get(block=True, timeout=1)
+                        absolute_chegada, chegada, servico, os_name, status = queue.get(block=True, timeout=1)
                         if stop_event.is_set():
                             break
 
-                        # Emitir atualização de progresso (status em progresso)
+                        timestamp_atendimento = time.time()
+                        tempo_espera = timestamp_atendimento - absolute_chegada
+
                         socketio.emit('simulation_update', {
                             'os_name': os_name,
-                            'timestamp_chegada': timestamp_chegada,
+                            'timestamp_chegada': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(absolute_chegada)),
                             'chegada': chegada,
                             'servico': servico,
                             'status': 'in_progress',
-                            'funcionario': funcionario_name  # Nome do funcionário atual
+                            'funcionario': funcionario_name,
+                            'tempo_espera': tempo_espera
                         })
 
-                        # Simular tempo de serviço
-                        time.sleep(servico)  # Simulação simples de tempo de serviço
+                        time.sleep(servico)
+
+                        timestamp_conclusao = time.time()
+                        tempo_conclusao = timestamp_conclusao - absolute_chegada
 
                         if stop_event.is_set():
                             break
 
-                        # Emitir atualização de conclusão (status concluído)
                         socketio.emit('simulation_update', {
                             'os_name': os_name,
-                            'timestamp_chegada': timestamp_chegada,
+                            'timestamp_chegada': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(absolute_chegada)),
                             'chegada': chegada,
                             'servico': servico,
                             'status': 'completed',
-                            'funcionario': funcionario_name  # Nome do funcionário atual
+                            'funcionario': funcionario_name,
+                            'tempo_espera': tempo_espera,
+                            'tempo_conclusao': tempo_conclusao
                         })
 
-                        # Indicar que o serviço foi concluído
                         queue.task_done()
                     else:
-                        time.sleep(1)  # Aguardar um momento antes de verificar novamente a fila
+                        time.sleep(1)
 
                 except Exception as e:
                     print(f"Exception in thread {funcionario_name}: {type(e).__name__} - {e}")
                     break
 
-        # Criar e iniciar os threads de funcionários
         num_funcionarios = int(data['num_funcionarios'])
         for i in range(num_funcionarios):
             thread = Thread(target=atender, args=(f'{i+1}',))
             thread.start()
             threads_funcionarios.append(thread)
 
-        # Aguardar até a thread de adicionar OSs à fila completar
         thread_adicionar_os.join()
 
-        # Aguardar até todos os threads de funcionários concluírem
         for thread in threads_funcionarios:
             thread.join()
 
         if not stop_event.is_set():
-            # Emitir mensagem de simulação completa
             emit('simulation_complete', {'message': 'Simulação completa'})
 
     except Exception as e:
@@ -313,13 +305,13 @@ def start_simulation(data):
 @socketio.on('stop_simulation')
 def stop_simulation():
     global stop_event
-    stop_event.set()  # Define o evento de parada
+    stop_event.set()
     emit('simulation_complete', {'message': 'Simulação parada pelo usuário'})
 
 @socketio.on('random_stop_simulation')
 def stop_simulation():
     global random_stop_event
-    random_stop_event.set()  # Define o evento de parada
+    random_stop_event.set()
     emit('random_simulation_complete', {'message': 'Simulação parada pelo usuário'})
 
 def calculate_std_dev_from_json(tipo):
@@ -401,7 +393,7 @@ def simulate_queue(num_simulations, num_funcionarios, random_chegada, random_ser
             if random_stop_event.is_set():
                 break
 
-            queue.put((timestamp_chegada, chegada, servico, os_name, 'pending'))
+            queue.put((absolute_chegada, chegada, servico, os_name, 'pending'))
 
             socketio.emit('random_simulation_update', {
                 'os_name': os_name,
@@ -420,31 +412,40 @@ def simulate_queue(num_simulations, num_funcionarios, random_chegada, random_ser
         while not random_stop_event.is_set():
             try:
                 if not queue.empty():
-                    timestamp_chegada, chegada, servico, os_name, status = queue.get(block=True, timeout=1)
+                    absolute_chegada, chegada, servico, os_name, status = queue.get(block=True, timeout=1)
                     if random_stop_event.is_set():
                         break
-
+                    
+                    timestamp_atendimento = time.time()
+                    tempo_espera = timestamp_atendimento - absolute_chegada
+                    
                     socketio.emit('random_simulation_update', {
                         'os_name': os_name,
-                        'timestamp_chegada': timestamp_chegada,
+                        'timestamp_chegada': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(absolute_chegada)),
                         'chegada': chegada,
                         'servico': servico,
                         'status': 'in_progress',
-                        'funcionario': funcionario_name
+                        'funcionario': funcionario_name,
+                        'tempo_espera': tempo_espera
                     })
 
                     time.sleep(servico)
 
+                    timestamp_conclusao = time.time()
+                    tempo_conclusao = timestamp_conclusao - absolute_chegada
+
                     if random_stop_event.is_set():
                         break
 
                     socketio.emit('random_simulation_update', {
                         'os_name': os_name,
-                        'timestamp_chegada': timestamp_chegada,
+                        'timestamp_chegada': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(absolute_chegada)),
                         'chegada': chegada,
                         'servico': servico,
                         'status': 'completed',
-                        'funcionario': funcionario_name
+                        'funcionario': funcionario_name,
+                        'tempo_espera': tempo_espera,
+                        'tempo_conclusao': tempo_conclusao
                     })
 
                     queue.task_done()
@@ -470,9 +471,8 @@ def simulate_queue(num_simulations, num_funcionarios, random_chegada, random_ser
 @socketio.on('stop_random_simulation')
 def stop_random_simulation():
     global random_stop_event 
-    random_stop_event.set()  # Define o evento de parada
+    random_stop_event.set()
     emit('random_simulation_complete', {'message': 'Simulação parada pelo usuário'})
-
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)
