@@ -16,9 +16,7 @@ pip==22.0.2
 prompt_toolkit==3.0.47
 pycparser==2.22
 Pygments==2.18.0
-python-apt==2.4.0+ubuntu3
 python-dateutil==2.9.0.post0
-python-debian==0.1.43+ubuntu1.1
 python-engineio==4.9.1
 python-socketio==5.11.3
 pytz==2024.1

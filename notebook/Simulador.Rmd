@@ -8,17 +8,15 @@ output:
 ---
 
 ```{r setup, include=FALSE}
+# Defina o caminho para a sua pasta r_library
+r_library_path <- "../r_library"
+
+# Carregar as bibliotecas R do caminho especificado
+library(ggplot2, lib.loc = r_library_path)
+library(rmarkdown, lib.loc = r_library_path)
+library(jsonlite, lib.loc = r_library_path)
+
 knitr::opts_chunk$set(echo = TRUE)
-```
-
-# Pacotes necessários
-```{r}
-install.packages(c("ggplot2", "rmarkdown", "jsonlite"))
-library(ggplot2)
-library(rmarkdown)
-library(jsonlite)
-
-```
 
 # Carregar datasets
 ```{r}

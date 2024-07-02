@@ -5,12 +5,7 @@ Este é um projeto de simulação de suporte online usando SimPy e Flask, onde s
 ## Requisitos
 
 - Python 3.12 ou superior
-- Flask
-- SimPy
-- Pandas
-- Numpy
-- Scipy
-- SocketIO
+- R-base
 
 ## Instalação
 
@@ -19,13 +14,25 @@ Este é um projeto de simulação de suporte online usando SimPy e Flask, onde s
 git clone https://github.com/JoiceColling/Simulador.git
 ```
 
-2. **Instalar as dependências:**
+2. **Instalar as dependências da aplicação:**
 
 Certifique-se de estar no diretório raiz do projeto e execute o comando:
+
+Dependencias do App:
+
 ```bash
 pip install -r requirements.txt
 ```
 
+Dependencias do R:
+```bash
+Rscript install_r_packages.R
+```
+Garantir que o R esteja instalado:
+
+```bash
+R --version
+```
 Isso instalará todas as dependências necessárias para rodar o projeto.
 
 ## Executar o Projeto

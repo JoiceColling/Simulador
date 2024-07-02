@@ -18,9 +18,11 @@ app.secret_key = 'your_secret_key'
 socketio = SocketIO(app)
 
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data_upload')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 DIR_ = os.path.join(os.getcwd())
 JSON_DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data_output')
+os.makedirs(JSON_DATA, exist_ok=True)
 ALLOWED_EXTENSIONS = {'txt', 'csv'}
 
 # Caminhos para os arquivos de dados randômicos
