@@ -4,7 +4,7 @@ Este é um projeto de simulação de suporte online usando SimPy e Flask, onde s
 
 ## Requisitos
 
-- Python 3.10 ou superior
+- Python 3.12 ou superior
 - Flask
 - SimPy
 - Pandas
@@ -35,7 +35,7 @@ Isso instalará todas as dependências necessárias para rodar o projeto.
 No terminal, em ``../app``, dentro do diretório do projeto, execute:
 
 ```bash
-python3 app.py
+flask run
 ```
 
 2. **Acessar o simulador:**
